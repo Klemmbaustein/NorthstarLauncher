@@ -195,6 +195,7 @@ target_compile_definitions(
             CURL_STATICLIB
     )
 
+
 set_target_properties(
     NorthstarDLL
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${NS_BINARY_DIR}

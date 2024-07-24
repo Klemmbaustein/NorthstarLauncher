@@ -26,11 +26,18 @@ set(CMAKE_C_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_VS_PLATFORM_TOOLSET v143)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
+# Should Northstar use Vanilla+/Vanilla compatability by default
+option(NORTHSTAR_IS_VANILLAPLUS OFF)
+
+if(${NORTHSTAR_IS_VANILLAPLUS})
+	add_compile_definitions(NORTHSTAR_IS_VANILLAPLUS)
+endif()
+
 # Deal with MSVC incompatiblity
 add_compile_definitions(_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR)
+set(NS_BINARY_DIR ${CMAKE_BINARY_DIR}/game)
 
 # This determines the real binary root directory
-set(NS_BINARY_DIR ${CMAKE_BINARY_DIR}/game)
 # NOTE [Fifty]: Visual studio deems Build root with the value "${projectDir}" in CMakeSettings.json as invalid and
 # defaults to using a temporary dir somewhere in %USER%/CMakeBuilds. To combat this we set it to "${projectDir}/build"
 # and then link binaries in ${CMAKE_BINARY_DIR}/game. This means you can copy your game into ${CMAKE_BINARY_DIR}/game

@@ -15,22 +15,44 @@ void InitialiseVersion()
 	// On github CI, we set this to a 0 automatically as we replace the 0,0,0,1 with the real version number
 	if (northstar_version[3])
 	{
-		sprintf(version, "%d.%d.%d.%d+dev", northstar_version[0], northstar_version[1], northstar_version[2], northstar_version[3]);
+		const char* version_format =
+#ifdef NORTHSTAR_IS_VANILLAPLUS
+			"%d.%d.%d+vp+dev";
+#else
+			"%d.%d.%d+vp+dev";
+#endif
+		sprintf(version, version_format, northstar_version[0], northstar_version[1], northstar_version[2], northstar_version[3]);
 		ua_len += snprintf(
 			NSUserAgent + ua_len,
 			sizeof(NSUserAgent) - ua_len,
+#ifdef NORTHSTAR_IS_VANILLAPLUS
+			"R2NorthstarVP/%d.%d.%d+dev",
+#else
 			"R2Northstar/%d.%d.%d+dev",
+#endif
 			northstar_version[0],
 			northstar_version[1],
 			northstar_version[2]);
 	}
 	else
 	{
-		sprintf(version, "%d.%d.%d.%d", northstar_version[0], northstar_version[1], northstar_version[2], northstar_version[3]);
+		const char* version_format =
+#ifdef NORTHSTAR_IS_VANILLAPLUS
+			"%d.%d.%d+vp";
+#else
+			"%d.%d.%d+vp";
+#endif
+
+		sprintf(version, version_format, northstar_version[0], northstar_version[1], northstar_version[2], northstar_version[3]);
 		ua_len += snprintf(
 			NSUserAgent + ua_len,
 			sizeof(NSUserAgent) - ua_len,
+#ifdef NORTHSTAR_IS_VANILLAPLUS
+			"R2NorthstarVP/%d.%d.%d",
+#else
 			"R2Northstar/%d.%d.%d",
+#endif
+
 			northstar_version[0],
 			northstar_version[1],
 			northstar_version[2]);

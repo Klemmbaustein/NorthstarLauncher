@@ -274,7 +274,11 @@ bool LoadNorthstar()
 {
 	FARPROC Hook_Init = nullptr;
 	{
+#if NORTHSTAR_IS_VANILLAPLUS
+		std::wstring strProfile = L"R2VanillaPlus";
+#else
 		std::wstring strProfile = L"R2Northstar";
+#endif
 		wchar_t* clArgChar = StrStrW(GetCommandLineW(), L"-profile=");
 		if (clArgChar)
 		{
@@ -298,8 +302,7 @@ bool LoadNorthstar()
 		}
 		else
 		{
-			std::cout << "[*] Profile was not found in command line arguments. Using default: R2Northstar" << std::endl;
-			strProfile = L"R2Northstar";
+			std::cout << "[*] Profile was not found in command line arguments. Using default." << std::endl;
 		}
 
 		// Check if "Northstar.dll" exists in profile directory, if it doesnt fall back to root

@@ -30,7 +30,11 @@ void InitialiseNorthstarPrefix()
 	}
 	else
 	{
+#ifdef NORTHSTAR_IS_VANILLAPLUS
+		NORTHSTAR_FOLDER_PREFIX = "R2VanillaPlus";
+#else
 		NORTHSTAR_FOLDER_PREFIX = "R2Northstar";
+#endif
 	}
 
 	// set the console title to show the current profile

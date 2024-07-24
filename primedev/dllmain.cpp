@@ -59,7 +59,11 @@ bool InitialiseNorthstar()
 
 	// determine if we are in vanilla-compatibility mode
 	g_pVanillaCompatibility = new VanillaCompatibility();
-	g_pVanillaCompatibility->SetVanillaCompatibility(strstr(GetCommandLineA(), "-vanilla") != NULL);
+#if NORTHSTAR_IS_VANILLAPLUS
+	g_pVanillaCompatibility->SetVanillaCompatibility(strstr(GetCommandLineA(), "-novanilla") == nullptr);
+#else
+	g_pVanillaCompatibility->SetVanillaCompatibility(strstr(GetCommandLineA(), "vanilla") != nullptr);
+#endif
 
 	// Write launcher version to log
 	StartupLog();
