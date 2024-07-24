@@ -195,10 +195,15 @@ target_compile_definitions(
             CURL_STATICLIB
     )
 
+if(${NORTHSTAR_IS_VANILLAPLUS})
+	set(NORTHSTARDLL_OUTPUT_NAME VPNorthstar)
+else()
+	set(NORTHSTARDLL_OUTPUT_NAME Northstar)
+endif()
 
 set_target_properties(
     NorthstarDLL
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${NS_BINARY_DIR}
-               OUTPUT_NAME Northstar
+               OUTPUT_NAME ${NORTHSTARDLL_OUTPUT_NAME}
                LINK_FLAGS "/MANIFEST:NO /DEBUG"
     )

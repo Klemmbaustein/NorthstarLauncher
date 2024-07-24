@@ -78,11 +78,11 @@ BEGIN
     BEGIN
         BLOCK "080904b0"
         BEGIN
-            VALUE "CompanyName", "Northstar Developers"
+            VALUE "CompanyName", "Northstar Developers, Klemmbaustein"
             VALUE "FileDescription", "Northstar Launcher"
             VALUE "FileVersion", "DEV"
             VALUE "InternalName", "NorthstarLauncher.exe"
-            VALUE "LegalCopyright", "Copyright (C) 2021"
+            VALUE "LegalCopyright", "Copyright (C) 2024"
             VALUE "OriginalFilename", "NorthstarLauncher.exe"
             VALUE "ProductName", "Northstar Launcher"
             VALUE "ProductVersion", "DEV"

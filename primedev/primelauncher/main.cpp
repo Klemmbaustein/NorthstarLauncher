@@ -27,6 +27,14 @@ HMODULE hTier0Module;
 wchar_t exePath[4096];
 wchar_t buffer[8192];
 
+
+enum class NorthstarLoadType
+{
+	vanillaPlus,
+	northstar,
+	none,
+};
+
 DWORD GetProcessByName(std::wstring processName)
 {
 	HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
@@ -72,7 +80,7 @@ FARPROC GetLauncherMain()
 	return Launcher_LauncherMain;
 }
 
-void LibraryLoadError(DWORD dwMessageId, const wchar_t* libName, const wchar_t* location)
+void LibraryLoadError(DWORD dwMessageId, const std::wstring& libName, const wchar_t* location)
 {
 	char text[8192];
 	std::string message = std::system_category().message(dwMessageId);
@@ -81,7 +89,7 @@ void LibraryLoadError(DWORD dwMessageId, const wchar_t* libName, const wchar_t* 
 		text,
 		"Failed to load the %ls at \"%ls\" (%lu):\n\n%hs\n\nMake sure you followed the Northstar installation instructions carefully "
 		"before reaching out for help.",
-		libName,
+		libName.c_str(),
 		location,
 		dwMessageId,
 		message.c_str());
@@ -252,75 +260,100 @@ void PrependPath()
 	}
 }
 
-bool ShouldLoadNorthstar(int argc, char* argv[])
+NorthstarLoadType GetNorthstarLoadType()
 {
-	for (int i = 0; i < argc; i++)
-		if (!strcmp(argv[i], "-nonorthstardll"))
-			return false;
-
-	auto runNorthstarFile = std::ifstream("run_northstar.txt");
-	if (runNorthstarFile)
+	if (strstr(GetCommandLineA(), "-northstar"))
 	{
-		std::stringstream runNorthstarFileBuffer;
-		runNorthstarFileBuffer << runNorthstarFile.rdbuf();
-		runNorthstarFile.close();
-		if (runNorthstarFileBuffer.str().starts_with("0"))
-			return false;
+		return NorthstarLoadType::northstar;
 	}
-	return true;
+#ifdef NORTHSTAR_IS_VANILLAPLUS
+	if (strstr(GetCommandLineA(), "-vanilla"))
+	{
+		return NorthstarLoadType::none;
+	}
+#endif
+	return NorthstarLoadType::vanillaPlus;
 }
 
-bool LoadNorthstar()
+static std::wstring ParseCommandLineWstring(std::wstring ArgName, std::wstring Default)
+{
+	ArgName = L"-" + ArgName + L"=";
+	wchar_t* clArgChar = StrStrW(GetCommandLineW(), ArgName.c_str());
+	if (!clArgChar)
+	{
+		return Default;
+	}
+	std::wstring cla = clArgChar;
+	std::wstring dirname;
+	if (cla.substr(9, 1) != L"\"")
+	{
+		size_t space = cla.find(L" ");
+		dirname = cla.substr(9, space - 9);
+		return dirname;
+	}
+
+	std::wstring quote = L"\"";
+	size_t quote1 = cla.find(quote);
+	size_t quote2 = (cla.substr(quote1 + 1)).find(quote);
+	dirname = cla.substr(quote1 + 1, quote2);
+	return dirname;
+}
+
+static FARPROC LoadNorthstarDLL(std::wstring ProfileName, std::wstring DllName)
+{
+	if (!GetExePathWide(exePath, 4096))
+	{
+		MessageBoxA(
+			GetForegroundWindow(),
+			"Failed getting game directory.\nThe game cannot continue and has to exit.",
+			"Northstar Wsock32 Proxy Error",
+			0);
+		abort();
+	}
+
+	// Check if "Northstar.dll" exists in profile directory, if it doesnt fall back to root
+	swprintf_s(buffer, L"%s\\%s\\%s", exePath, ProfileName.c_str(), DllName.c_str());
+
+	if (!fs::exists(fs::path(buffer)))
+		swprintf_s(buffer, L"%s\\%s", exePath, DllName.c_str());
+
+	std::wcout << L"[*] Using: " << buffer << std::endl;
+
+	HMODULE hHookModule = LoadLibraryExW(buffer, 0, 8u);
+	FARPROC Hook_Init = nullptr;
+	if (hHookModule)
+		Hook_Init = GetProcAddress(hHookModule, "InitialiseNorthstar");
+	if (!hHookModule || !Hook_Init)
+	{
+		LibraryLoadError(GetLastError(), DllName, buffer);
+		abort();
+	}
+
+	return Hook_Init;
+}
+
+bool LoadNorthstar(NorthstarLoadType type)
 {
 	FARPROC Hook_Init = nullptr;
 	{
-#if NORTHSTAR_IS_VANILLAPLUS
-		std::wstring strProfile = L"R2VanillaPlus";
-#else
-		std::wstring strProfile = L"R2Northstar";
-#endif
-		wchar_t* clArgChar = StrStrW(GetCommandLineW(), L"-profile=");
-		if (clArgChar)
+		std::wstring defaultProfile = L"R2VanillaPlus";
+		std::wstring defaultDll = L"VPNorthstar.dll";
+
+		if (type != NorthstarLoadType::vanillaPlus)
 		{
-			std::wstring cla = clArgChar;
-			if (cla.substr(9, 1) != L"\"")
-			{
-				size_t space = cla.find(L" ");
-				std::wstring dirname = cla.substr(9, space - 9);
-				std::wcout << L"[*] Found profile in command line arguments: " << dirname << std::endl;
-				strProfile = dirname;
-			}
-			else
-			{
-				std::wstring quote = L"\"";
-				size_t quote1 = cla.find(quote);
-				size_t quote2 = (cla.substr(quote1 + 1)).find(quote);
-				std::wstring dirname = cla.substr(quote1 + 1, quote2);
-				std::wcout << L"[*] Found profile in command line arguments: " << dirname << std::endl;
-				strProfile = dirname;
-			}
-		}
-		else
-		{
-			std::cout << "[*] Profile was not found in command line arguments. Using default." << std::endl;
+			std::cout << "[*] Not using Vanilla+ mode, attempting to load regular Northstar files" << std::endl;
+			defaultProfile = L"R2Northstar";
+			defaultDll = L"Northstar.dll";
 		}
 
-		// Check if "Northstar.dll" exists in profile directory, if it doesnt fall back to root
-		swprintf_s(buffer, L"%s\\%s\\Northstar.dll", exePath, strProfile.c_str());
-		if (!fs::exists(fs::path(buffer)))
-			swprintf_s(buffer, L"%s\\Northstar.dll", exePath);
+		std::wstring profile = ParseCommandLineWstring(L"profile", defaultProfile);
+		std::wstring dll = ParseCommandLineWstring(L"dllName", defaultDll);
 
-		std::wcout << L"[*] Using: " << buffer << std::endl;
+		std::wcout << "[*] Profile: " << profile << ", DLL: " << dll << std::endl;
 
-		hHookModule = LoadLibraryExW(buffer, 0, 8u);
-		if (hHookModule)
-			Hook_Init = GetProcAddress(hHookModule, "InitialiseNorthstar");
-		if (!hHookModule || Hook_Init == nullptr)
-		{
-			LibraryLoadError(GetLastError(), L"Northstar.dll", buffer);
-			return false;
-		}
+		Hook_Init = LoadNorthstarDLL(profile, dll);
 	}
+
 	((bool (*)())Hook_Init)();
 
 	return true;
@@ -400,21 +433,6 @@ FARPROC InitNorthstar(int argc, char* argv[])
 
 	PrependPath();
 
-	if (!fs::exists("ns_startup_args.txt"))
-	{
-		std::ofstream file("ns_startup_args.txt");
-		std::string defaultArgs = "-multiple";
-		file.write(defaultArgs.c_str(), defaultArgs.length());
-		file.close();
-	}
-	if (!fs::exists("ns_startup_args_dedi.txt"))
-	{
-		std::ofstream file("ns_startup_args_dedi.txt");
-		std::string defaultArgs = "+setplaylist private_match";
-		file.write(defaultArgs.c_str(), defaultArgs.length());
-		file.close();
-	}
-
 	std::cout << "[*] Loading tier0.dll" << std::endl;
 	swprintf_s(buffer, L"%s\\bin\\x64_retail\\tier0.dll", exePath);
 	hTier0Module = LoadLibraryExW(buffer, 0, LOAD_WITH_ALTERED_SEARCH_PATH);
@@ -424,11 +442,11 @@ FARPROC InitNorthstar(int argc, char* argv[])
 		return nullptr;
 	}
 
-	bool loadNorthstar = ShouldLoadNorthstar(argc, argv);
-	if (loadNorthstar)
+	NorthstarLoadType loadType = GetNorthstarLoadType();
+	if (loadType != NorthstarLoadType::none)
 	{
 		std::cout << "[*] Loading Northstar" << std::endl;
-		if (!LoadNorthstar())
+		if (!LoadNorthstar(loadType))
 			return nullptr;
 	}
 	else

@@ -22,7 +22,14 @@ target_link_libraries(
             ws2_32.lib
     )
 
+if(${NORTHSTAR_IS_VANILLAPLUS})
+	set(NORTHSTARLAUNCHER_EXEC_NAME VanillaPlusLauncher)
+else()
+	set(NORTHSTARLAUNCHER_EXEC_NAME NorthstarLauncher)
+endif()
+
 set_target_properties(
-    NorthstarLauncher PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${NS_BINARY_DIR} LINK_FLAGS
-                                                                           "/MANIFEST:NO /DEBUG /STACK:8000000"
-    )
+    NorthstarLauncher PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${NS_BINARY_DIR}
+	OUTPUT_NAME ${NORTHSTARLAUNCHER_EXEC_NAME}
+	LINK_FLAGS "/MANIFEST:NO /DEBUG /STACK:8000000"
+)
